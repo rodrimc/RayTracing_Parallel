@@ -18,8 +18,9 @@
 class Plane : public IShape
 {
 public:
-	Plane (const Point& position, const Vector3D& normal, const Color& color)
-			: _position (position), _normal (normal.normalized ()), _color (color)
+	Plane (const Point& position, const Vector3D& normal, const Color& color,
+	     	const float &refl = 0, const float &transp = 0)
+			: IShape(position, color, refl, transp), _normal (normal.normalized ())
 	{
 
 	}
@@ -60,9 +61,7 @@ public:
 	}
 
 protected:
-	Point _position;
 	Vector3D _normal;
-	Color _color;
 };
 
 #endif /* PLANE_H_ */

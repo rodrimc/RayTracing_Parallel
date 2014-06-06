@@ -25,21 +25,21 @@ struct Intersection
 	Vector3D normal;
 
 	Intersection ()
-			: ray (), t (far), pShape (0), color (), emitted(), normal ()
+			: ray (), t (far), pShape (0), color (), emitted (), normal ()
 	{
 
 	}
 
 	Intersection (const Intersection& i)
-			: ray (i.ray), t (i.t), pShape (i.pShape),
-				color (i.color), emitted(i.emitted), normal (i.normal)
+			: ray (i.ray), t (i.t), pShape (i.pShape), color (i.color),
+				emitted (i.emitted), normal (i.normal)
 	{
 
 	}
 
 	Intersection (const Ray& ray)
-			: ray (ray), t (ray.farPlane()), pShape (0), color (),
-			  emitted(), normal ()
+			: ray (ray), t (ray.farPlane ()), pShape (0), color (), emitted (),
+				normal ()
 	{
 
 	}
@@ -69,10 +69,31 @@ struct Intersection
 class IShape
 {
 public:
-	virtual ~IShape() {}
+	IShape (Point position, Color color, float reflection = 0.0f,
+	        float transparency = 0.0f)
+			: _position (position), _color (color), _reflection(reflection),
+			  _transparency(transparency)
+	{
+	}
 
-	// Subclasses must implement this; this is the meat of ray tracing
-    virtual bool intersect(Intersection& intersection) = 0;
+	virtual ~IShape ()
+	{
+	}
+
+	inline Point position () const { return _position; }
+	inline Color color () const { return _color; }
+	inline float reflection () const { return _reflection; }
+	inline float transparency () const { return _transparency; }
+
+	virtual bool intersect (Intersection& intersection) = 0;
+
+protected:
+	Point _position;
+	Color _color;
+
+	float _reflection;
+	float _transparency;
+
 };
 
 #endif /* ISHAPE_H_ */

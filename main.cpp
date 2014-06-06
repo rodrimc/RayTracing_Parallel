@@ -11,13 +11,23 @@
 #include "Vector3D.h"
 #include "Color.h"
 #include "Light.h"
+#include "Sphere.h"
 
 #include <set>
 #include <math.h>
 #include <string>
 #include <fstream>
 
+#define MAX_DEPTH 7
+
 typedef Color Image;
+
+#define MIX 0.5
+
+float mix (const float &a, const float &b)
+{
+	return b * MIX + a * (float (1) - MIX);
+}
 
 static const int width = 512;
 static const int height = 512;
@@ -55,6 +65,73 @@ bool calculateIntersect (std::set<IShape*> &sceneShapes,
 	return isIntersected;
 }
 
+Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
+						 std::set<Light*>& sceneLights, int depth)
+{
+	Intersection intersection (ray);
+
+	Color pixelColor (0.0f, 0.0f, 0.0f);
+	if (calculateIntersect (sceneShapes, intersection))
+	{
+		pixelColor += intersection.color;
+		IShape *shape = intersection.pShape;
+		Point intersectionPoint = intersection.position ();
+
+		if ((shape->transparency () > 0 || shape->reflection () > 0)
+				&& depth <= MAX_DEPTH)
+		{
+			Vector3D normal = intersection.normal;
+
+			float ratio = -ray.direction ().dot (normal);
+			float fresnel = mix (pow (1 - ratio, 3), 1);
+
+			Vector3D reflDir = ray.direction () -
+					normal * 2 * ray.direction ().dot (normal);
+			reflDir.normalize ();
+
+			Ray reflectionRay (intersectionPoint + normal, reflDir);
+
+			Color reflectionColor = trace (reflectionRay, sceneShapes, sceneLights,
+																		 depth + 1);
+
+			Color refractionColor;
+
+//			pixelColor = (reflectionColor * fresnel * shape->reflection ()
+//					+ refractionColor * (1 - fresnel) * shape->transparency ())
+//					* intersection.color;
+			pixelColor = reflectionColor * shape->reflection () * shape->color ();
+		}
+
+		else
+		{
+			pixelColor = intersection.color;
+			Color lightContribution = Color(0.0f, 0.0f, 0.0f);
+
+			for (auto light : sceneLights)
+			{
+				Vector3D lightDirection =
+						(light->position () - intersectionPoint).normalized ();
+
+				Ray shadowRay (intersectionPoint, lightDirection);
+				Intersection shadowIntersection (shadowRay);
+
+				if (!calculateIntersect (sceneShapes, shadowIntersection))
+				{
+
+					lightContribution += light->color() *
+					                        intersection.color *
+					                        std::max(0.0f, lightDirection.dot(
+					                        		intersection.normal));
+				}
+			}
+			pixelColor += lightContribution;
+		}
+		pixelColor.clamp ();
+	}
+
+	return pixelColor;
+}
+
 int main ()
 {
 	std::string filename = "out.ppm";
@@ -63,30 +140,32 @@ int main ()
 	std::set<Light *> sceneLights;
 
 	Plane plane (Point (0.0f, -2.0f, 0.0f), Vector3D (0.0f, 1.0f, 0.0f),
-	             Color(1.0f, 1.0f, 1.0f));
+							 Color (1.0f, 1.0f, 1.0f));
+
+	Sphere sphere1 (Point (3.0f, 0.0f, 0.0f), Color (1.0, 0.0, 0.0), 1.5f, 1.0);
+	Sphere sphere2 (Point (-3.0f, 0.0f, 0.0f), Color (0.0, 1.0, 0.0), 1.5f, 1.0);
+	Sphere sphere3 (Point (0.0f, 0.0f, 4.0f), Color (0.0, 0.0, 1.0), 1.5f, 1.0);
+	Sphere sphere4 (Point (0.0f, 0.0f, -4.0f), Color (0.5, 0.5, 0.5), 1.5f, 1.0);
 
 	sceneShapes.insert (&plane);
+	sceneShapes.insert (&sphere1);
+	sceneShapes.insert (&sphere2);
+	sceneShapes.insert (&sphere3);
+	sceneShapes.insert (&sphere4);
 
-	RectangleLight areaLight (Point (-2.5f, 5.0f, -2.5f),
-														Vector3D (5.0f, 0.0f, 0.0f),
-														Vector3D (0.0f, 0.0f, 5.0f),
-														Color (0.0f, 0.0f, 1.0f), 3.0f);
-
-	RectangleLight smallAreaLight (Point (0.0f, 1.0f, -2.0f),
-																 Vector3D (4.0f, 0.0f, 0.0f),
-																 Vector3D (0.0f, 0.0f, 4.0f),
-																 Color (1.0f, 0.0f, 0.0f), 3.0f);
+	Light areaLight (Point (0.0f, 3.0f, 0.0f), Color (1.0f, 1.0f, 1.0f), 3.0f);
+	Light smallAreaLight (Point (0.0f, 1.0f, -2.0f), Color (1.0f, 1.0f, 1.0f),
+												3.0f);
 
 	sceneLights.insert (&areaLight);
 	sceneLights.insert (&smallAreaLight);
-
 
 	float fov = 30.0;
 	float tanFov = tan (fov * M_PI / 180.0f);
 
 	Image *image = new Image[width * height];
 
-	Point origin (0.0f, 15.0f, 25.0f);
+	Point origin (0.0f, 10.0f, 30.0f);
 	Point target (0.0f, 0.0f, 1.0f);
 	Vector3D targetUpDirection (0.0f, 1.0f, 0.0f);
 	Vector3D forward = (target - origin).normalized ();
@@ -106,40 +185,7 @@ int main ()
 					forward + right * ((xu - 0.5f) * tanFov)
 							+ up * ((yu - 0.5f) * tanFov));
 
-			Intersection intersection (ray);
-
-			Color pixelColor (0.0f, 0.0f, 0.0f);
-			if (calculateIntersect (sceneShapes, intersection))
-			{
-				pixelColor += intersection.color;
-
-				Point intersectionPoint = intersection.position ();
-				for (auto light : sceneLights)
-				{
-					Point lightPoint = light->position ();
-					Vector3D lightDirection = lightPoint - intersectionPoint;
-					Vector3D lightNormal = lightDirection.normalized ();
-
-					float lightDistance = lightDirection.normalize ();
-
-					Ray shadowRay (intersectionPoint, lightDirection, lightDistance);
-					Intersection shadowIntersection (shadowRay);
-
-					if (!calculateIntersect(sceneShapes, shadowIntersection))
-					{
-						// The light point is visible, so let's add that
-						// lighting contribution
-						float lightAttenuation = std::max (
-								0.0f, intersection.normal.dot (lightDirection));
-						pixelColor += intersection.color * light->color()
-								* lightAttenuation;
-					}
-				}
-
-			}
-			pixelColor.clamp ();
-
-			image[y * width + x] = pixelColor;
+			image[y * width + x] = trace (ray, sceneShapes, sceneLights, 0);
 		}
 	}
 

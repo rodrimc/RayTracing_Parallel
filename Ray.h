@@ -53,6 +53,8 @@ public:
 	inline Vector3D direction () const { return _direction; }
 	inline float farPlane () const { return _farPlane; }
 
+	inline void setOrigin (const Point &origin) { _origin = origin; }
+
 	inline Point calculate (float t) const
 	{
 		return _origin + t * _direction ;
