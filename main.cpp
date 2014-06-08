@@ -70,7 +70,7 @@ Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 {
 	Intersection intersection (ray);
 
-	Color pixelColor (0.0f, 0.0f, 0.0f);
+	Color pixelColor (1.0f, 1.0f, 1.0f);
 	if (calculateIntersect (sceneShapes, intersection))
 	{
 		pixelColor += intersection.color;
@@ -105,7 +105,7 @@ Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 		else
 		{
 			pixelColor = intersection.color;
-			Color lightContribution = Color(0.0f, 0.0f, 0.0f);
+			Color lightContribution ;
 
 			for (auto light : sceneLights)
 			{
@@ -142,9 +142,9 @@ int main ()
 	Plane plane (Point (0.0f, -2.0f, 0.0f), Vector3D (0.0f, 1.0f, 0.0f),
 							 Color (1.0f, 1.0f, 1.0f));
 
-	Sphere sphere1 (Point (3.0f, 0.0f, 0.0f), Color (1.0, 0.0, 0.0), 1.5f, 1.0);
-	Sphere sphere2 (Point (-3.0f, 0.0f, 0.0f), Color (0.0, 1.0, 0.0), 1.5f, 1.0);
-	Sphere sphere3 (Point (0.0f, 0.0f, 4.0f), Color (0.0, 0.0, 1.0), 1.5f, 1.0);
+	Sphere sphere1 (Point (3.0f, 0.0f, 0.0f), Color (1.0, 0.5, 0.5), 1.5f, 1.0);
+	Sphere sphere2 (Point (-3.0f, 0.0f, 0.0f), Color (0.5, 1.0, 0.5), 1.5f, 1.0);
+	Sphere sphere3 (Point (0.0f, 0.0f, 4.0f), Color (0.5, 0.5, 1.0), 1.5f, 1.0);
 	Sphere sphere4 (Point (0.0f, 0.0f, -4.0f), Color (0.5, 0.5, 0.5), 1.5f, 1.0);
 
 	sceneShapes.insert (&plane);
