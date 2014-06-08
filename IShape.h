@@ -69,10 +69,8 @@ struct Intersection
 class IShape
 {
 public:
-	IShape (Point position, Color color, float reflection = 0.0f,
-	        float transparency = 0.0f)
-			: _position (position), _color (color), _reflection(reflection),
-			  _transparency(transparency)
+	IShape (Point position, Color color, float reflection = 0.0f)
+			: _position (position), _color (color), _reflection(reflection)
 	{
 	}
 
@@ -82,18 +80,15 @@ public:
 
 	inline Point position () const { return _position; }
 	inline Color color () const { return _color; }
-	inline float reflection () const { return _reflection; }
-	inline float transparency () const { return _transparency; }
+	inline float reflection () const { return _reflection > 0.0f; }
 
-	virtual bool intersect (Intersection& intersection) = 0;
+	virtual bool intersect (const Ray &, float *, Vector3D&, Color &) = 0;
 
 protected:
 	Point _position;
 	Color _color;
 
 	float _reflection;
-	float _transparency;
-
 };
 
 #endif /* ISHAPE_H_ */

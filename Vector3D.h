@@ -108,6 +108,11 @@ public:
 		return *this;
 	}
 
+	inline Vector3D operator - () const
+	{
+		return Vector3D(-_x, -_y, -_z);
+	}
+
 	inline float dot (const Vector3D& v)
 	{
 		return _x * v.x () + _y * v.y () + _z * v.z ();

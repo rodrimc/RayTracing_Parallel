@@ -54,6 +54,7 @@ public:
 	inline float farPlane () const { return _farPlane; }
 
 	inline void setOrigin (const Point &origin) { _origin = origin; }
+	inline void setDirection (const Point &direction) { _direction = direction; }
 
 	inline Point calculate (float t) const
 	{

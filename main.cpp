@@ -22,176 +22,162 @@
 
 typedef Color Image;
 
-#define MIX 0.5
+#define MIX 0.3
 
-float mix (const float &a, const float &b)
+float mix(const float &a, const float &b)
 {
-	return b * MIX + a * (float (1) - MIX);
+	return b * MIX + a * (float(1) - MIX);
 }
 
-static const int width = 512;
-static const int height = 512;
+static const int width = 1920;
+static const int height = 1080;
 
-void writePPMFile (Image *image, const char *filename, float width,
-									 float height)
+void writePPMFile(Image *image, const char *filename, float width, float height)
 {
-	std::ofstream ofs (filename, std::ios::out | std::ios::binary);
+	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
 	ofs << "P6\n" << width << " " << height << "\n255\n";
 	for (unsigned i = 0; i < width * height; ++i)
 	{
 		Image pixel = image[i];
 
-		ofs << (unsigned char) (std::min (float (1), pixel.r ()) * 255)
-				<< (unsigned char) (std::min (float (1), pixel.g ()) * 255)
-				<< (unsigned char) (std::min (float (1), pixel.b ()) * 255);
+		ofs << (unsigned char) (std::min(float(1), pixel.r()) * 255)
+				<< (unsigned char) (std::min(float(1), pixel.g()) * 255)
+				<< (unsigned char) (std::min(float(1), pixel.b()) * 255);
 	}
-	ofs.close ();
+	ofs.close();
 }
 
-bool calculateIntersect (std::set<IShape*> &sceneShapes,
-												 Intersection& intersection)
+IShape* calculateIntersect(const Ray &ray, std::set<IShape*> &sceneShapes,
+		float *t, Vector3D &shapeNormal, Color &pixelColor)
 {
-	bool isIntersected = false;
-
+	*t = INFINITY;
+	Color color;
+	Vector3D normal;
+	IShape *shapeIntersection = 0;
 	for (auto shape : sceneShapes)
 	{
-		if (shape->intersect (intersection))
+		float near;
+		if (shape->intersect(ray, &near, normal, color) && near < *t)
 		{
-			isIntersected = true;
-			break;
+			shapeNormal = normal;
+			pixelColor = color;
+			*t = near;
+			shapeIntersection = shape;
 		}
 	}
 
-	return isIntersected;
+	return shapeIntersection;
 }
 
-Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
-						 std::set<Light*>& sceneLights, int depth)
+Color trace(const Ray& ray, std::set<IShape*>& sceneShapes,
+		std::set<Light*>& sceneLights, int depth)
 {
-	Intersection intersection (ray);
-
-	Color pixelColor (1.0f, 1.0f, 1.0f);
-	if (calculateIntersect (sceneShapes, intersection))
+	Color pixelColor(0.8);
+	float near;
+	Color color;
+	Vector3D normal;
+	IShape *shape = calculateIntersect(ray, sceneShapes, &near, normal, color);
+	if (shape)
 	{
-		pixelColor += intersection.color;
-		IShape *shape = intersection.pShape;
-		Point intersectionPoint = intersection.position ();
+		pixelColor += color;
+		Point intersectionPoint = ray.calculate(near);
 
-		if ((shape->transparency () > 0 || shape->reflection () > 0)
-				&& depth <= MAX_DEPTH)
+		if (ray.direction().dot(normal) > 0)
+			normal = -normal;
+
+		if (shape->reflection() > 0 && depth <= MAX_DEPTH)
 		{
-			Vector3D normal = intersection.normal;
+			Vector3D reflDir = ray.direction()
+					- normal * 2 * ray.direction().dot(normal);
+			reflDir.normalize();
 
-			float ratio = -ray.direction ().dot (normal);
-			float fresnel = mix (pow (1 - ratio, 3), 1);
+			Ray reflectionRay(intersectionPoint + normal, reflDir);
+			Color reflectionColor = trace(reflectionRay, sceneShapes, sceneLights,
+					depth + 1);
 
-			Vector3D reflDir = ray.direction () -
-					normal * 2 * ray.direction ().dot (normal);
-			reflDir.normalize ();
-
-			Ray reflectionRay (intersectionPoint + normal, reflDir);
-
-			Color reflectionColor = trace (reflectionRay, sceneShapes, sceneLights,
-																		 depth + 1);
-
-			Color refractionColor;
-
-//			pixelColor = (reflectionColor * fresnel * shape->reflection ()
-//					+ refractionColor * (1 - fresnel) * shape->transparency ())
-//					* intersection.color;
-			pixelColor = reflectionColor * shape->reflection () * shape->color ();
+			pixelColor = reflectionColor * shape->reflection() * color;
 		}
-
 		else
 		{
-			pixelColor = intersection.color;
-			Color lightContribution ;
+			pixelColor = color;
+			Color lightContribution;
 
 			for (auto light : sceneLights)
 			{
 				Vector3D lightDirection =
-						(light->position () - intersectionPoint).normalized ();
+						(light->position() - intersectionPoint).normalized();
 
-				Ray shadowRay (intersectionPoint, lightDirection);
-				Intersection shadowIntersection (shadowRay);
-
-				if (!calculateIntersect (sceneShapes, shadowIntersection))
+				const Ray shadowRay(intersectionPoint, lightDirection);
+				float near = INFINITY;
+				IShape *s = calculateIntersect(shadowRay, sceneShapes, &near, normal,
+						color);
+				if (!s)
 				{
-
-					lightContribution += light->color() *
-					                        intersection.color *
-					                        std::max(0.0f, lightDirection.dot(
-					                        		intersection.normal));
+					lightContribution += light->color() * pixelColor;
 				}
 			}
 			pixelColor += lightContribution;
 		}
-		pixelColor.clamp ();
+		pixelColor.clamp();
 	}
 
 	return pixelColor;
 }
 
-int main ()
+int main()
 {
 	std::string filename = "out.ppm";
 
 	std::set<IShape *> sceneShapes;
 	std::set<Light *> sceneLights;
 
-	Plane plane (Point (0.0f, -2.0f, 0.0f), Vector3D (0.0f, 1.0f, 0.0f),
-							 Color (1.0f, 1.0f, 1.0f));
+	Plane floor(Point(0.0f, -2.0f, 0.0f), Vector3D(0.0f, 1.0f, 0.0f),
+			Color(1.0f, 1.0f, 1.0f));
 
-	Sphere sphere1 (Point (3.0f, 0.0f, 0.0f), Color (1.0, 0.5, 0.5), 1.5f, 1.0);
-	Sphere sphere2 (Point (-3.0f, 0.0f, 0.0f), Color (0.5, 1.0, 0.5), 1.5f, 1.0);
-	Sphere sphere3 (Point (0.0f, 0.0f, 4.0f), Color (0.5, 0.5, 1.0), 1.5f, 1.0);
-	Sphere sphere4 (Point (0.0f, 0.0f, -4.0f), Color (0.5, 0.5, 0.5), 1.5f, 1.0);
+	Plane mirror(Point(0.0f, 0.0f, -20.0f), Vector3D(0.0f, 0.0f, 1.0f),
+			Color(0.5f, 0.5f, 0.5f), 0.4, false);
 
-	sceneShapes.insert (&plane);
-	sceneShapes.insert (&sphere1);
-	sceneShapes.insert (&sphere2);
-	sceneShapes.insert (&sphere3);
-	sceneShapes.insert (&sphere4);
+	Sphere sphere1(Point(3.0f, 0.0f, 0.0f), Color(1.0, 0.5, 0.5), 1.5f, 0.4);
+	Sphere sphere2(Point(-3.0f, 0.0f, 0.0f), Color(0.5, 1.0, 0.5), 1.5f, 1.0);
+	Sphere sphere3(Point(0.0f, 0.0f, 4.0f), Color(0.5, 0.5, 1.0), 1.5f, 1.0);
+	Sphere sphere4(Point(0.0f, 0.0f, -4.0f), Color(0.5, 0.5, 0.5), 1.5f, 1.0);
 
-	Light areaLight (Point (0.0f, 3.0f, 0.0f), Color (1.0f, 1.0f, 1.0f), 3.0f);
-	Light smallAreaLight (Point (0.0f, 1.0f, -2.0f), Color (1.0f, 1.0f, 1.0f),
-												3.0f);
+	sceneShapes.insert(&floor);
+	sceneShapes.insert(&mirror);
+	sceneShapes.insert(&sphere1);
+	sceneShapes.insert(&sphere2);
+	sceneShapes.insert(&sphere3);
+	sceneShapes.insert(&sphere4);
 
-	sceneLights.insert (&areaLight);
-	sceneLights.insert (&smallAreaLight);
+	Light leftLight(Point(-2.0f, 3.0f, 4.0f), Color(1.0f, 1.0f, 1.0f), 1.0f);
+	Light rightLight(Point(2.0f, 3.0f, 4.0f), Color(1.0f, 1.0f, 1.0f), 1.0f);
+
+	sceneLights.insert(&leftLight);
+	sceneLights.insert(&rightLight);
 
 	float fov = 30.0;
-	float tanFov = tan (fov * M_PI / 180.0f);
+	float tanFov = tan(fov * M_PI / 180.0f);
 
+	float aspectratio = float(width) / float(height);
 	Image *image = new Image[width * height];
 
-	Point origin (0.0f, 10.0f, 30.0f);
-	Point target (0.0f, 0.0f, 1.0f);
-	Vector3D targetUpDirection (0.0f, 1.0f, 0.0f);
-	Vector3D forward = (target - origin).normalized ();
-
-	Vector3D right = forward.cross (targetUpDirection).normalized ();
-	Vector3D up = right.cross (forward).normalized ();
+	Point origin(0.0f, 5.0f, 20.0f);
 
 	for (int y = 0; y < height; y++)
 	{
-		float yu = 1.0f - (float (y) / float (height - 1));
+		float yu = (1 - 2 * ((y + 0.5) * 1 / height)) * tanFov;
 		for (int x = 0; x < width; x++)
 		{
-			float xu = float (x) / float (width - 1);
-
-			Ray ray (
-					origin,
-					forward + right * ((xu - 0.5f) * tanFov)
-							+ up * ((yu - 0.5f) * tanFov));
-
-			image[y * width + x] = trace (ray, sceneShapes, sceneLights, 0);
+			float xu = (2 * ((x + 0.5) * 1 / float(width)) - 1) * tanFov
+					* aspectratio;
+			Ray ray(origin, Vector3D(xu, yu, -1));
+			image[y * width + x] = trace(ray, sceneShapes, sceneLights, 0);
 		}
 	}
 
-	writePPMFile (image, filename.c_str (), width, height);
+	writePPMFile(image, filename.c_str(), width, height);
 
-	system (std::string ("eog " + filename).c_str ());
+	system(std::string("eog " + filename).c_str());
 
 	return 1;
 }

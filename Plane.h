@@ -19,8 +19,8 @@ class Plane : public IShape
 {
 public:
 	Plane (const Point& position, const Vector3D& normal, const Color& color,
-	     	const float &refl = 0, const float &transp = 0)
-			: IShape(position, color, refl, transp), _normal (normal.normalized ())
+	     	const float &refl = 0, bool flag = true)
+			: IShape(position, color, refl), _normal (normal.normalized ()), _flag (flag)
 	{
 
 	}
@@ -29,32 +29,31 @@ public:
 	{
 	}
 
-	virtual bool intersect (Intersection& intersection)
+	virtual bool intersect (const Ray &ray, float *t, Vector3D& normal, Color &pixelColor)
 	{
-		float nDotD = _normal.dot (intersection.ray.direction ());
+		float nDotD = _normal.dot (ray.direction ());
 		if (nDotD >= 0.0f)
 		{
 			return false;
 		}
 
-		float t = (_position.dot (_normal)
-				- intersection.ray.origin ().dot (_normal))
-				/ intersection.ray.direction ().dot (_normal);
+		float t0 = (_position.dot (_normal)
+				- ray.origin ().dot (_normal))
+				/ ray.direction ().dot (_normal);
 
-		if (t >= intersection.t || t < kRayTMin)
+		if (t0 < kRayTMin)
 		{
 			return false;
 		}
 
-		intersection.t = t;
-		intersection.pShape = this;
-		intersection.color = _color;
-		intersection.normal = _normal;
+		*t = t0;
+		normal = _normal;
+		pixelColor = _color;
 
-		if (std::fmod ((intersection.position () - _position).length () * 0.25f,
+		if (_flag && std::fmod ((ray.calculate(t0)  - _position).length () * 0.25f,
 											1.0f) > 0.5f)
 		{
-			intersection.color *= 0.2f;
+			pixelColor *= 0.2f;
 		}
 
 		return true;
@@ -62,6 +61,7 @@ public:
 
 protected:
 	Vector3D _normal;
+	bool _flag;
 };
 
 #endif /* PLANE_H_ */
