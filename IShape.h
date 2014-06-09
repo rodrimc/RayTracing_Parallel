@@ -13,59 +13,6 @@
 #include "Ray.h"
 #include "Color.h"
 
-class IShape;
-
-struct Intersection
-{
-	Ray ray;
-	float t;
-	IShape *pShape;
-	Color color;
-	Color emitted;
-	Vector3D normal;
-
-	Intersection ()
-			: ray (), t (far), pShape (0), color (), emitted (), normal ()
-	{
-
-	}
-
-	Intersection (const Intersection& i)
-			: ray (i.ray), t (i.t), pShape (i.pShape), color (i.color),
-				emitted (i.emitted), normal (i.normal)
-	{
-
-	}
-
-	Intersection (const Ray& ray)
-			: ray (ray), t (ray.farPlane ()), pShape (0), color (), emitted (),
-				normal ()
-	{
-
-	}
-
-	Intersection& operator = (const Intersection& i)
-	{
-		ray = i.ray;
-		t = i.t;
-		pShape = i.pShape;
-		color = i.color;
-		emitted = i.emitted;
-		normal = i.normal;
-		return *this;
-	}
-
-	bool intersected () const
-	{
-		return (pShape == 0) ? false : true;
-	}
-
-	Point position () const
-	{
-		return ray.calculate (t);
-	}
-};
-
 class IShape
 {
 public:
