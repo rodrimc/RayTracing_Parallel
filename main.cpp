@@ -24,13 +24,17 @@
 
 typedef Color Image;
 
+static const int width = 1280;
+static const int height = 720;
+
+static const float diffuseCoefficient = 1.0f;
+static const float ambientCoefficient = 0.2f;
+static const float specularCoefficient = 0.7f;
+
 void logSDLError (std::ostream &os, const std::string &msg)
 {
 	os << msg << " error: " << SDL_GetError () << std::endl;
 }
-
-static const int width = 1280;
-static const int height = 720;
 
 void writePPMFile (Image *image, const char *filename, float width,
 									 float height)
@@ -47,7 +51,6 @@ void writePPMFile (Image *image, const char *filename, float width,
 	}
 	ofs.close ();
 }
-
 IShape* calculateIntersect (const Ray &ray, std::set<IShape*> &sceneShapes,
 														float *t, Vector3D &shapeNormal, Color &pixelColor)
 {
@@ -73,17 +76,17 @@ IShape* calculateIntersect (const Ray &ray, std::set<IShape*> &sceneShapes,
 Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 						 std::set<Light*>& sceneLights, int depth)
 {
-	Color pixelColor (0.8);
+	Color pixelColor (0.3);
+
 	float near;
 	Color color;
 	Vector3D normal;
 	IShape *shape = calculateIntersect (ray, sceneShapes, &near, normal, color);
 	if (shape)
 	{
-		pixelColor += color;
+		pixelColor = color;
 		Point intersectionPoint = ray.calculate (near);
-
-		if (ray.direction ().dot (normal) > 0) normal = -normal;
+		const float bias = 1e-4;
 
 		if (shape->reflection () > 0 && depth <= MAX_DEPTH)
 		{
@@ -91,36 +94,79 @@ Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 					- normal * 2 * ray.direction ().dot (normal);
 			reflDir.normalize ();
 
-			Ray reflectionRay (intersectionPoint + normal, reflDir);
+			Ray reflectionRay (intersectionPoint + normal * bias, reflDir);
 			Color reflectionColor = trace (reflectionRay, sceneShapes, sceneLights,
 																		 depth + 1);
 
-			pixelColor = reflectionColor * shape->reflection () * color;
+			pixelColor = reflectionColor * shape->reflection () * shape->color ();
+
+			for (auto light : sceneLights)
+			{
+				Vector3D lightDirection =
+										(light->position () - intersectionPoint).normalized ();
+				Vector3D lightRefl = lightDirection
+											- normal * 2 * lightDirection.dot (normal);
+				float m = lightRefl.dot (ray.direction ());
+				m = m < 0 ? 0.0f : m;
+
+				float cosB = m / lightRefl.length () * ray.direction ().length ();
+				float spec = pow (cosB, 50);
+
+				pixelColor += specularCoefficient * light->color () * spec;
+			}
 		}
 		else
 		{
-			pixelColor = color;
-			Color lightContribution;
+			Color ambientColor (0.0);
+			Color specularColor (0.0);
+			Color diffuseColor (0.0);
+
+			Vector3D n;
+			Color c;
+
+			pixelColor = Color (0.0f);
 
 			for (auto light : sceneLights)
 			{
 				Vector3D lightDirection =
 						(light->position () - intersectionPoint).normalized ();
 
-				const Ray shadowRay (intersectionPoint, lightDirection);
+				const Ray shadowRay (intersectionPoint + normal * bias, lightDirection);
 				float near = INFINITY;
-				IShape *s = calculateIntersect (shadowRay, sceneShapes, &near, normal,
-																				color);
-				if (!s)
+
+				IShape *s = calculateIntersect (shadowRay, sceneShapes, &near, n, c);
+				if (!s) //N tem interseção entre o objeto e as luzes
 				{
-					lightContribution += light->color () * pixelColor;
+					ambientColor += ambientCoefficient * color;
+					float dot = normal.dot (lightDirection);
+					dot = dot < 0 ? 0.0f : dot;
+
+					diffuseColor += diffuseCoefficient * color * light->color () * dot;
+
+					Vector3D lightRefl = lightDirection
+							- normal * 2 * lightDirection.dot (normal);
+					lightRefl.normalize ();
+
+					float m = lightRefl.dot (ray.direction ());
+					m = m < 0 ? 0.0f : m;
+
+					float cosB = m / lightRefl.length () * ray.direction ().length ();
+					float spec = pow (cosB, 50);
+
+					specularColor += specularCoefficient * light->color () * spec;
+
+					pixelColor += specularColor + diffuseColor + ambientColor;
+				}
+				else //is shadowed!!!
+				{
+					pixelColor = shape->color () * 0.2;
+					break;
 				}
 			}
-			pixelColor += lightContribution;
-		}
-		pixelColor.clamp ();
-	}
 
+		}
+	}
+	pixelColor.clamp ();
 	return pixelColor;
 }
 
@@ -134,29 +180,33 @@ int main ()
 	Plane floor (Point (0.0f, -2.0f, 0.0f), Vector3D (0.0f, 1.0f, 0.0f),
 							 Color (1.0f, 1.0f, 1.0f));
 
-	Plane mirror (Point (0.0f, 0.0f, -20.0f), Vector3D (0.0f, 0.0f, 1.0f),
-								Color (0.5f, 0.5f, 0.5f), 0.4, false);
+	Plane backMirror (Point (0.0f, 0.0f, -20.0f), Vector3D (0.0f, 0.0f, 1.0f),
+										Color (0.5f, 0.5f, 0.5f), 1.0, false);
 
-	Sphere sphere1 (Point (3.0f, 0.0f, 0.0f), Color (1.0, 0.5, 0.5), 1.5f, 0.4);
-	Sphere sphere2 (Point (-3.0f, 0.0f, 0.0f), Color (0.5, 1.0, 0.5), 1.5f, 1.0);
-	Sphere sphere3 (Point (0.0f, 0.0f, 4.0f), Color (0.5, 0.5, 1.0), 1.5f, 1.0);
-	Sphere sphere4 (Point (0.0f, 0.0f, -4.0f), Color (0.5, 0.5, 0.5), 1.5f, 1.0);
+	Sphere sphere1 (Point (3.0f, 0.0f, 0.0f), Color (1.0, 0.5, 0.5), 1.5f, 0.0);
+	Sphere sphere2 (Point (-3.0f, 0.0f, 0.0f), Color (0.5, 1.0, 0.5), 1.5f, 0.0);
+	Sphere sphere3 (Point (0.0f, 0.0f, 4.0f), Color (0.5, 0.5, 1.0), 1.5f, 0.0);
+	Sphere sphere4 (Point (0.0f, 0.0f, -4.0f), Color (0.5, 0.5, 0.5), 1.5f, 0.0);
+
+	Sphere sphere5 (Point (0.0f, 10.0f, 0.0f), Color (0.9, 0.9, 0.9), 4.0f, 1.0);
 
 	sceneShapes.insert (&floor);
-	sceneShapes.insert (&mirror);
+//	sceneShapes.insert (&backMirror);
+
 	sceneShapes.insert (&sphere1);
 	sceneShapes.insert (&sphere2);
 	sceneShapes.insert (&sphere3);
 	sceneShapes.insert (&sphere4);
+//	sceneShapes.insert (&sphere5);
 
-	Light leftLight (Point (-2.0f, 3.0f, 4.0f), Color (1.0f, 1.0f, 1.0f), 1.0f);
-	Light rightLight (Point (2.0f, 3.0f, 4.0f), Color (1.0f, 1.0f, 1.0f), 1.0f);
+	Light leftLight (Point (-10.0f, 3.0f, 3.0f), Color (1.0f, 1.0f, 1.0f), 1.0f);
+	Light rightLight (Point (10.0f, 3.0f, 3.0f), Color (1.0f, 1.0f, 1.0f), 1.0f);
 
 	sceneLights.insert (&leftLight);
-	sceneLights.insert (&rightLight);
+//	sceneLights.insert (&rightLight);
 
-	float fov = 30.0;
-	float tanFov = tan (fov * M_PI / 180.0f);
+	float fov = 60.0;
+	float tanFov = tan (fov * 0.5 * M_PI / 180.0f);
 
 	float aspectratio = float (width) / float (height);
 	Image *image = new Image[width * height];
@@ -229,14 +279,25 @@ int main ()
 			float xu = (2 * ((x + 0.5) * 1 / float (width)) - 1) * tanFov
 					* aspectratio;
 			Ray ray (origin, Vector3D (xu, yu, -1));
+
 			color = trace (ray, sceneShapes, sceneLights, 0);
 			image[y * width + x] = color;
 
-			pixels[y * width + x] = SDL_MapRGBA (surface->format,
-																					 Uint8 (color.r () * 255),
-																					 Uint8 (color.g () * 255),
-																					 Uint8 (color.b () * 255),
-																					 Uint8 (255));
+			if (sdlOk)
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+				pixels[y * width + x] = SDL_MapRGBA (surface->format,
+						Uint8 (color.r () * 255),
+						Uint8 (color.g () * 255),
+						Uint8 (color.b () * 255), Uint8 (255));
+#else
+				pixels[y * width + x] = SDL_MapRGBA (surface->format,
+																						 Uint8 (color.b () * 255),
+																						 Uint8 (color.g () * 255),
+																						 Uint8 (color.r () * 255),
+																						 Uint8 (255));
+
+#endif
+
 		}
 		if (sdlOk)
 		{

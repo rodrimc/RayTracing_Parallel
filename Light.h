@@ -15,8 +15,8 @@
 class Light
 {
 public:
-	Light (Vector3D position, Color color, float power)
-			: _position (position), _color (color), _power(power)
+	Light (Vector3D position, Color color, float power, float diffuse = 0.3f)
+			: _position (position), _color (color), _power(power), _spec(diffuse)
 	{
 	}
 
@@ -30,10 +30,15 @@ public:
 		return _color * _power;
 	}
 
+	float power () const { return _power; }
+
+	float specular () const { return _spec; }
+
 protected:
 	Vector3D _position;
 	Color _color;
 	float _power;
-};
+	float _spec;
+	};
 
 #endif /* LIGHT_H_ */

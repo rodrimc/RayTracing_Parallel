@@ -11,14 +11,8 @@
 
 #include "Vector3D.h"
 
-// Don't ever start a ray exactly where you previously hit; you must offset it
-// a little bit so you don't accidentally 'self-intersect'.
 const float kRayTMin = 0.00001f;
-// Unless otherwise specified, rays are defined to be able to hit anything as
-// far as the computer can see.  You can limit a ray's max if you need to though
-// as is done often when calculating shadows, so you only check the range from
-// the point on the surface to the point on the light.
-const float far = 1.0e30f;
+const float far = 50.0f;
 
 class Ray
 {
@@ -26,19 +20,19 @@ public:
 	Ray ()
 			: _origin (), _direction (0.0f, 0.0f, 1.0f), _farPlane (far)
 	{
-
+		_direction.normalize();
 	}
 
 	Ray (const Ray& r)
-			: _origin (r.origin()), _direction (r.direction()), _farPlane (r.farPlane())
+			: _origin (r.origin()), _direction (r.direction()),
+			  _farPlane (r.farPlane())
 	{
-
 	}
 
 	Ray (const Point& origin, const Vector3D& direction, float tMax = far)
 			: _origin (origin), _direction (direction), _farPlane (tMax)
 	{
-
+		_direction.normalize();
 	}
 
 	Ray& operator = (const Ray& r)

@@ -42,11 +42,6 @@ public:
 		float t0 = (_position.dot (_normal) - ray.origin ().dot (_normal))
 				/ ray.direction ().dot (_normal);
 
-		if (t0 < kRayTMin)
-		{
-			return false;
-		}
-
 		*t = t0;
 		normal = _normal;
 		pixelColor = _color;

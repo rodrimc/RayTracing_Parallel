@@ -28,39 +28,29 @@ public:
 	virtual bool intersect (const Ray &ray, float *t, Vector3D& normal,
 													Color &pixelColor)
 	{
-		Ray localRay = ray;
-		localRay.setOrigin (localRay.origin () - _position);
+		Point line = _position - ray.origin();
+		float tca = line.dot(ray.direction());
 
-		float a = localRay.direction ().length2 ();
-		float b = 2.0f * localRay.direction ().dot (localRay.origin ());
-		float c = localRay.origin ().length2 () - _radius * _radius;
-
-		float t0, t1, discriminant;
-
-		discriminant = b * b - 4 * a * c;
-		if (discriminant < 0)
+		if (tca < 0)
 			return false;
-		else if (discriminant == 0)
-			t0 = t1 = -0.5 * b / a;
-		else
-		{
-			float q =
-					(b > 0) ?
-							-0.5 * (b + sqrt (discriminant)) :
-							-0.5 * (b - sqrt (discriminant));
-			t0 = q / a;
-			t1 = c / q;
-		}
+
+		float d2 = line.length2() - tca * tca;
+
+		if (d2 > _radius * _radius)
+			return false;
+
+		float thc = sqrt (_radius * _radius - d2);
+
+		float t0 = tca - thc;
+		float t1 = tca + thc;
+
 		if (t0 > t1) std::swap (t0, t1);
-
-		if (t0 < kRayTMin)
-		{
-			return false;
-		}
 
 		*t = t0;
 		normal = (ray.calculate (t0) - _position).normalized ();
 		pixelColor = _color;
+
+		return true;
 
 		return true;
 	}
