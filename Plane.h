@@ -15,39 +15,43 @@
 
 #include <cmath>
 
-class Plane : public IShape
+class Plane: public IShape
 {
 public:
-	Plane (const Point& position, const Vector3D& normal, const Color& color,
-				 const float &refl = 0, bool flag = true)
-			: IShape (position, color, refl), _normal (normal.normalized ()),
-				_flag (flag)
+	Plane(const Point& position, const Vector3D& normal, const Color& color,
+			const float &refl = 0.0f, const float &transp = 0.0f, float refracIndex =
+					0.0f, float spec = 0.0f, float diff = 0.0f, bool flag = true)
+			: IShape(position, color, refl, transp, refracIndex, spec, diff), _normal(
+					normal.normalized()), _flag(flag)
 	{
 
 	}
 
-	virtual ~Plane ()
+	virtual ~Plane()
 	{
 	}
 
-	virtual bool intersect (const Ray &ray, float *t, Vector3D& normal,
-													Color &pixelColor)
+	virtual bool intersect(const Ray &ray, float *t, Vector3D& normal,
+			Color &pixelColor)
 	{
-		float nDotD = _normal.dot (ray.direction ());
+		float nDotD = _normal.dot(ray.direction());
 		if (nDotD >= 0.0f)
 		{
 			return false;
 		}
 
-		float t0 = (_position.dot (_normal) - ray.origin ().dot (_normal))
-				/ ray.direction ().dot (_normal);
+		float t0 = (_position.dot(_normal) - ray.origin().dot(_normal))
+				/ ray.direction().dot(_normal);
+
+		if (t0 > ray.farDistance())
+			return false;
 
 		*t = t0;
 		normal = _normal;
 		pixelColor = _color;
 
 		if (_flag
-				&& std::fmod ((ray.calculate (t0) - _position).length () * 0.25f, 1.0f)
+				&& std::fmod((ray.calculate(t0) - _position).length() * 0.25f, 1.0f)
 						> 0.5f)
 		{
 			pixelColor *= 0.2f;
