@@ -12,7 +12,7 @@
 #include "Vector3D.h"
 
 const float kRayTMin = 0.00001f;
-const float far = 100.0f;
+const float far = 60.0f;
 
 class Ray
 {

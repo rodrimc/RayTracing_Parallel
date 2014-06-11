@@ -17,10 +17,9 @@ class IShape
 {
 public:
 	IShape(Point position, Color color, float reflection = 0.0f,
-			float transparency = 0.0f, float refracIndex = 0.0f, float spec = 0.0f,
-			float diff = 0.0f)
-			: _position(position), _color(color), _reflection(reflection), _transparency(
-					transparency), _refracIndex(refracIndex), _specularCoefficient(spec), _diffuseCoefficient(
+			float spec = 0.0f, float diff = 0.0f)
+			: _position(position), _color(color), _reflection(reflection),
+			  _specularCoefficient(spec), _diffuseCoefficient(
 					diff)
 	{
 	}
@@ -41,10 +40,6 @@ public:
 	{
 		return _reflection;
 	}
-	inline float transparency() const
-	{
-		return _transparency;
-	}
 	inline float specular() const
 	{
 		return _specularCoefficient;
@@ -52,10 +47,6 @@ public:
 	inline float diffuse() const
 	{
 		return _diffuseCoefficient;
-	}
-	inline float rIndex () const
-	{
-		return _refracIndex;
 	}
 
 	virtual bool intersect(const Ray &, float *, Vector3D&, Color &) = 0;
@@ -65,11 +56,8 @@ protected:
 	Color _color;
 
 	float _reflection;
-	float _transparency;
-
 	float _diffuseCoefficient;
 	float _specularCoefficient;
-	float _refracIndex;
 };
 
 #endif /* ISHAPE_H_ */
