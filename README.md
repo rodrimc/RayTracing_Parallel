@@ -23,3 +23,6 @@ following command after build the source:
 
 ./RayTracingT3 800 600 60
 
+![RayTracingT3](https://raw.githubusercontent.com/rodrimc/RayTracing/master/RayTracerT3.png)
+
+Fell free to contribute with this code.
