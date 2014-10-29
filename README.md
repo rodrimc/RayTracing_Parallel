@@ -24,6 +24,6 @@ following command after build the source:
 
 ./RayTracing_openmp 800 600 60
 
-![RayTracing_Parallel](https://raw.githubusercontent.com/rodrimc/RayTracing/master/RayTracer_parallel.png)
+![RayTracing_Parallel](https://raw.githubusercontent.com/rodrimc/RayTracing_Parallel/master/RayTracer_parallel.png)
 
 Fell free to contribute.
