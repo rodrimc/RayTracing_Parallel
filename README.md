@@ -7,8 +7,8 @@ This code implements rays' intersection with spheres and plane.
 There is also reflection.
 
 It was implemented and tested on ubuntu 14.04, compiled using
-g++ 4.8.2. There is a minimalist makefile that builds two executables:
-RayTracing_openmp and RayTracing_cuda.
+g++ 4.8.2. There is a minimalist makefile that builds three executables:
+RayTracing RayTracing_openmp and RayTracing_cuda.
 
 Run
 -----------------
@@ -24,6 +24,6 @@ following command after build the source:
 
 ./RayTracing_openmp 800 600 60
 
-![RayTracing_Parallel](https://raw.githubusercontent.com/rodrimc/RayTracing_Parallel/master/RayTracer_parallel.png)
+![RayTracing_Parallel](https://raw.githubusercontent.com/rodrimc/RayTracing_Parallel/master/out.ppm)
 
 Fell free to contribute.
