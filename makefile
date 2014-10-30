@@ -1,21 +1,28 @@
-app = RayTracingT3
+app = RayTracing
 
+utillib = libutil.a
+utilc = util.cpp
+utilo = util.o
 srcExt = cpp
 srcDir = .
 objDir = build
 binDir = build
 inc = inc
+output = out.ppm
+main = main.cpp
+main_openmp = main_openmp.cpp
+main_cuda = main_cuda.cpp
 
 debug = 0
 
-CFlags = -Wall -std=c++0x -DSDL_SUPPORT
-LDFlags = -lSDL2
-libs = -lSDL2
-libDir =
+CFlags_common = -Wall -std=c++0x
+CFlags_openmp = -fopenmp
+CFlags_cuda =
+LDFlags = -fopenmp
+libs = 
 
 
 #************************ DO NOT EDIT BELOW THIS LINE! ************************
-
 ifeq ($(debug),1)
 	debug=-g
 else
@@ -24,8 +31,7 @@ endif
 inc := $(addprefix -I,$(inc))
 libs := $(addprefix -l,$(libs))
 libDir := $(addprefix -L,$(libDir))
-CFlags += -c $(debug) $(inc) $(libDir) $(libs)
-sources := $(shell find $(srcDir) -name '*.$(srcExt)')
+CFlags = $(CFlags_common) $(debug) $(inc) $(libDir) $(libs) 
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
 objects := $(patsubst %.$(srcExt),$(objDir)/%.o,$(sources))
 
@@ -37,13 +43,25 @@ endif
 
 .phony: all clean distclean
 
+all: $(binDir)/$(utillib) $(binDir)/$(app) $(binDir)/$(app)_openmp $(binDir)/$(app)_cuda
 
-all: $(binDir)/$(app)
-
-$(binDir)/$(app): buildrepo $(objects)
+$(binDir)/$(utillib):
 	@mkdir -p `dirname $@`
-	@echo "Linking $@..."
-	@$(CC) $(objects) $(LDFlags) -o $@
+	@echo "Compiling $(utillib)"
+	@$(CC) -c $(utilc) $(CFlags)
+	@ar rcs $(binDir)/$(utillib) $(utilo)
+
+$(binDir)/$(app): $(main)
+	@echo "Compiling $@..."
+	@$(CC) $(main) $(CFlags) $(LDFlags) -o $@ -static $(binDir)/$(utillib)
+
+$(binDir)/$(app)_openmp: $(main_openmp)
+	@echo "Compiling $@..."
+	@$(CC) $(main_openmp) $(CFlags) $(CFlags_openmp) $(LDFlags) -o $@ -static $(binDir)/$(utillib)
+
+$(binDir)/$(app)_cuda: $(main_cuda)
+	@echo "Compiling $@..."
+	@$(CC) $(main_cuda) $(CFlags) $(CFlags_cuda)$(LDFlags) -o $@ -static $(binDir)/$(utillib)
 
 $(objDir)/%.o: %.$(srcExt)
 	@echo "Generating dependencies for $<..."
@@ -52,10 +70,12 @@ $(objDir)/%.o: %.$(srcExt)
 	@$(CC) $(CFlags) $< -o $@
 
 clean:
+	$(RM) $(output)
 	$(RM) -r $(objDir)
 
 distclean: clean
-	$(RM) -r $(binDir)/$(app)
+	$(RM) $(output)
+	$(RM) -r $(binDir)
 
 buildrepo:
 	@$(call make-repo)
@@ -66,7 +86,6 @@ define make-repo
 	mkdir -p $(objDir)/$$dir; \
    done
 endef
-
 
 # usage: $(call make-depend,source-file,object-file,depend-file)
 define make-depend
