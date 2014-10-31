@@ -43,7 +43,9 @@ endif
 
 .phony: all clean distclean
 
-all: $(binDir)/$(utillib) $(binDir)/$(app) $(binDir)/$(app)_openmp $(binDir)/$(app)_cuda
+all: $(binDir)/$(utillib) $(binDir)/$(app) $(binDir)/$(app)_openmp 
+	
+#$(binDir)/$(app)_cuda
 
 $(binDir)/$(utillib):
 	@mkdir -p `dirname $@`

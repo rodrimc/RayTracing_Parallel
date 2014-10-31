@@ -1,16 +1,16 @@
 /*
- * Sphere.h
+ * c_Sphere.h
  *
- *  Created on: Jun 6, 2014
+ *  Created on: Oct 31, 2014
  *      Author: Rodrigo Costa
  *			e-mail: rodrigocosta@telemidia.puc-rio.br
  */
 
-#ifndef SPHERE_H_
-#define SPHERE_H_
+#ifndef C_SPHERE_H_
+#define C_SPHERE_H_
 
-#include "IShape.h"
-#include "Vector3D.h"
+#include "c_IShape.h"
+#include "c_Vector3D.h"
 
 class Sphere : public IShape
 {
@@ -25,7 +25,7 @@ public:
 	{
 	}
 
-	virtual bool intersect (const Ray &ray, float *t, Vector3D& normal,
+	virtual __device__ bool intersect (const Ray &ray, float *t, Vector3D& normal,
 													Color &pixelColor)
 	{
 		Point line = _position - ray.origin ();
@@ -42,7 +42,12 @@ public:
 		float t0 = tca - thc;
 		float t1 = tca + thc;
 
-		if (t0 > t1) std::swap (t0, t1);
+		if (t0 > t1) 
+    {
+      float tmp = t0;
+      t0 = t1;
+      t1 = tmp;
+    }
 
 		if (t0 > ray.farDistance ()) return false;
 
@@ -53,7 +58,7 @@ public:
 		return true;
 	}
 
-	float radius () const
+	float __device__ radius () const
 	{
 		return _radius;
 	}
@@ -63,4 +68,5 @@ protected:
 
 };
 
-#endif /* SPHERE_H_ */
+#endif /* C_SPHERE_H_ */
+

@@ -92,7 +92,7 @@ IShape* calculateIntersect (const Ray &ray, std::set<IShape*> &sceneShapes,
 
 Color ambientColor (const Color& color)
 {
-	return ambientCoefficient * color;
+	return ambient_coefficient * color;
 }
 
 Color specularColor (const Vector3D &direction, const Vector3D &normal,

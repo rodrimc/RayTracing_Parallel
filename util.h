@@ -22,14 +22,12 @@
 
 typedef Color Image;
 
-static const float ambientCoefficient = 0.2f;
+static const float ambient_coefficient = 0.2f;
 static const float bias = 1e-4;
 
 void writePPMFile(Image *image, const char *filename, float width, float height);
 
 void initScene(std::set<IShape *>&sceneShapes, std::set<Light *>&sceneLights);
-
-extern "C" {
 
 IShape* calculateIntersect (const Ray &ray, std::set<IShape*> &sceneShapes,
 														float *t, Vector3D &shapeNormal, Color &pixelColor);
@@ -50,5 +48,5 @@ Color diffuseColor (const Vector3D& direction, const Light *light,
 
 Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 						 std::set<Light*>& sceneLights, int depth);
-}
+
 #endif /* UTIL_H_ */
