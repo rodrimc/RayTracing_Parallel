@@ -2,22 +2,26 @@ app = RayTracing
 
 utillib = libutil.a
 utilc = util.cpp
+utilcuda = c_util.cpp
+utilcudao = c_util.o
 utilo = util.o
 srcExt = cpp
 srcDir = .
+outDir = output
 objDir = build
 binDir = build
 inc = inc
 output = out.ppm
 main = main.cpp
 main_openmp = main_openmp.cpp
-main_cuda = main_cuda.cpp
+main_cuda = main_cuda.cu
+CU_CC = nvcc
 
 debug = 0
 
 CFlags_common = -Wall -std=c++0x
 CFlags_openmp = -fopenmp
-CFlags_cuda =
+CFlags_cuda = -arch=sm_30 -Icuda
 LDFlags = -fopenmp
 libs = 
 
@@ -43,15 +47,18 @@ endif
 
 .phony: all clean distclean
 
-all: $(binDir)/$(utillib) $(binDir)/$(app) $(binDir)/$(app)_openmp 
+all: bootstrap $(binDir)/$(utillib) $(binDir)/$(app) $(binDir)/$(app)_openmp $(binDir)/$(app)_cuda 
+
+bootstrap:
+	mkdir -p $(binDir)
+	mkdir -p $(outDir)
 	
 #$(binDir)/$(app)_cuda
 
 $(binDir)/$(utillib):
-	@mkdir -p `dirname $@`
 	@echo "Compiling $(utillib)"
-	@$(CC) -c $(utilc) $(CFlags)
-	@ar rcs $(binDir)/$(utillib) $(utilo)
+	@$(CC) -o $(objDir)/$(utilo) -c $(utilc) $(CFlags)
+	@ar rcs $(binDir)/$(utillib) $(objDir)/$(utilo)
 
 $(binDir)/$(app): $(main)
 	@echo "Compiling $@..."
@@ -63,7 +70,7 @@ $(binDir)/$(app)_openmp: $(main_openmp)
 
 $(binDir)/$(app)_cuda: $(main_cuda)
 	@echo "Compiling $@..."
-	@$(CC) $(main_cuda) $(CFlags) $(CFlags_cuda)$(LDFlags) -o $@ -static $(binDir)/$(utillib)
+	@$(CU_CC) $(main_cuda) $(CFlags_cuda) -o $@
 
 $(objDir)/%.o: %.$(srcExt)
 	@echo "Generating dependencies for $<..."

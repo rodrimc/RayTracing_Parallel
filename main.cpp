@@ -52,7 +52,7 @@ int main (int argc, char** argv)
 	float aspectratio = float (width) / float (height);
 	Point origin (0.0f, 5.0f, 20.0f);
 
-	std::string filename = "out.ppm";
+	std::string filename = "output/sequential.ppm";
 	Image *image = new Image[width * height];
 
 	printf ("Rendering scene:\n");

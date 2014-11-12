@@ -138,7 +138,6 @@ Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 	IShape *shape = calculateIntersect (ray, sceneShapes, &near, normal, color);
 	if (shape)
 	{
-		pixelColor = color;
 		Point intersectionPoint = ray.calculate (near);
 
 		Vector3D n;
@@ -155,7 +154,7 @@ Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 
 			const Ray shadowRay (intersectionPoint + normal * bias, lightDirection,
 													 lightLenght);
-			float near = INFINITY;
+			near = INFINITY;
 
 			IShape *s = calculateIntersect (shadowRay, sceneShapes, &near, n, c);
 			if (!s) //There is no object between the intersected pixel and this light.
@@ -193,7 +192,6 @@ Color trace (const Ray& ray, std::set<IShape*>& sceneShapes,
 
 			pixelColor += reflectionColor * shape->reflection ();
 		}
-
 	}
 
 	pixelColor.clamp ();
